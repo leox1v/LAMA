@@ -15,40 +15,41 @@ import os
 from os.path import isfile, join
 from shutil import copyfile
 from collections import defaultdict
+import torch
 
 LMs = [
-    {
-        "lm": "transformerxl",
-        "label": "transformerxl",
-        "models_names": ["transformerxl"],
-        "transformerxl_model_name": "transfo-xl-wt103",
-        "transformerxl_model_dir": "pre-trained_language_models/transformerxl/transfo-xl-wt103/",
-    },
-    {
-        "lm": "elmo",
-        "label": "elmo",
-        "models_names": ["elmo"],
-        "elmo_model_name": "elmo_2x4096_512_2048cnn_2xhighway",
-        "elmo_vocab_name": "vocab-2016-09-10.txt",
-        "elmo_model_dir": "pre-trained_language_models/elmo/original",
-        "elmo_warm_up_cycles": 10,
-    },
-    {
-        "lm": "elmo",
-        "label": "elmo5B",
-        "models_names": ["elmo"],
-        "elmo_model_name": "elmo_2x4096_512_2048cnn_2xhighway_5.5B",
-        "elmo_vocab_name": "vocab-enwiki-news-500000.txt",
-        "elmo_model_dir": "pre-trained_language_models/elmo/original5.5B/",
-        "elmo_warm_up_cycles": 10,
-    },
-    {
-        "lm": "bert",
-        "label": "bert_base",
-        "models_names": ["bert"],
-        "bert_model_name": "bert-base-cased",
-        "bert_model_dir": "pre-trained_language_models/bert/cased_L-12_H-768_A-12",
-    },
+    # {
+    #     "lm": "transformerxl",
+    #     "label": "transformerxl",
+    #     "models_names": ["transformerxl"],
+    #     "transformerxl_model_name": "transfo-xl-wt103",
+    #     "transformerxl_model_dir": "pre-trained_language_models/transformerxl/transfo-xl-wt103/",
+    # },
+    # {
+    #     "lm": "elmo",
+    #     "label": "elmo",
+    #     "models_names": ["elmo"],
+    #     "elmo_model_name": "elmo_2x4096_512_2048cnn_2xhighway",
+    #     "elmo_vocab_name": "vocab-2016-09-10.txt",
+    #     "elmo_model_dir": "pre-trained_language_models/elmo/original",
+    #     "elmo_warm_up_cycles": 10,
+    # },
+    # {
+    #     "lm": "elmo",
+    #     "label": "elmo5B",
+    #     "models_names": ["elmo"],
+    #     "elmo_model_name": "elmo_2x4096_512_2048cnn_2xhighway_5.5B",
+    #     "elmo_vocab_name": "vocab-enwiki-news-500000.txt",
+    #     "elmo_model_dir": "pre-trained_language_models/elmo/original5.5B/",
+    #     "elmo_warm_up_cycles": 10,
+    # },
+    # {
+    #     "lm": "bert",
+    #     "label": "bert_base",
+    #     "models_names": ["bert"],
+    #     "bert_model_name": "bert-base-cased",
+    #     "bert_model_dir": "pre-trained_language_models/bert/cased_L-12_H-768_A-12",
+    # },
     {
         "lm": "bert",
         "label": "bert_large",
@@ -81,7 +82,12 @@ def run_experiments(
 
     results_file = open("last_results.csv", "w+")
 
-    for relation in relations:
+    for i, relation in enumerate(relations):
+        if i < 2:
+            print(f'Skipping {relation["label"]}.')
+            continue
+        import pdb; pdb.set_trace()
+
         pp.pprint(relation)
         PARAMETERS = {
             "dataset_filename": "{}{}{}".format(
@@ -90,7 +96,7 @@ def run_experiments(
             "common_vocab_filename": "pre-trained_language_models/common_vocab_cased.txt",
             "template": "",
             "bert_vocab_name": "vocab.txt",
-            "batch_size": 32,
+            "batch_size": max(32, int(32 * torch.cuda.device_count())),
             "logdir": "output",
             "full_logdir": "output/results/{}/{}".format(
                 input_param["label"], relation["relation"]
@@ -100,6 +106,7 @@ def run_experiments(
             "threads": -1,
             "interactive": False,
             "use_negated_probes": use_negated_probes,
+            "num_examples": 0,
         }
 
         if "template" in relation:
@@ -209,9 +216,9 @@ def run_all_LMs(parameters):
 
 if __name__ == "__main__":
 
-    print("1. Google-RE")
-    parameters = get_GoogleRE_parameters()
-    run_all_LMs(parameters)
+    # print("1. Google-RE")
+    # parameters = get_GoogleRE_parameters()
+    # run_all_LMs(parameters)
 
     print("2. T-REx")
     parameters = get_TREx_parameters()
@@ -221,7 +228,7 @@ if __name__ == "__main__":
     parameters = get_ConceptNet_parameters()
     run_all_LMs(parameters)
 
-    print("4. SQuAD")
-    parameters = get_Squad_parameters()
-    run_all_LMs(parameters)
+    # print("4. SQuAD")
+    # parameters = get_Squad_parameters()
+    # run_all_LMs(parameters)
 

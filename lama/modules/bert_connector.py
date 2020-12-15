@@ -208,7 +208,10 @@ class Bert(Base_Connector):
         return token_ids
 
     def _cuda(self):
-        self.masked_bert_model.cuda()
+        if torch.cuda.device_count() > 1:
+            self.masked_bert_model = torch.nn.DataParallel(self.masked_bert_model)
+            print(f'Parallelizing over {torch.cuda.device_count()} GPUs.')
+        self.masked_bert_model.to('cuda')
 
     def get_batch_generation(self, sentences_list, logger= None,
                              try_cuda=True):

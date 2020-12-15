@@ -21,11 +21,11 @@ CASED_MODELS = [
   #   "cpu": True,
   #   "output_dictionary_size": -1
   # },
-  {
-    # "TransformerXL"
-    "lm": "transformerxl",
-    "transformerxl_model_dir": "pre-trained_language_models/transformerxl/transfo-xl-wt103/",
-  },
+  # {
+  #   # "TransformerXL"
+  #   "lm": "transformerxl",
+  #   "transformerxl_model_dir": "pre-trained_language_models/transformerxl/transfo-xl-wt103/",
+  # },
   {
     # "ELMO ORIGINAL"
     "lm": "elmo",

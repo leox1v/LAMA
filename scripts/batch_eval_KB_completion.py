@@ -22,6 +22,7 @@ from multiprocessing.pool import ThreadPool
 import multiprocessing
 import lama.evaluation_metrics as metrics
 import time, sys
+import numpy as np
 
 
 def load_file(filename):
@@ -86,7 +87,7 @@ def init_logging(log_directory):
     return logger
 
 
-def batchify(data, batch_size):
+def batchify(data, batch_size, num_examples=0):
     msg = ""
     list_samples_batches = []
     list_sentences_batches = []
@@ -94,13 +95,27 @@ def batchify(data, batch_size):
     current_sentences_batches = []
     c = 0
 
+    # Put the masked sentence together
+    for i in range(len(data)):
+        data[i]['masked_sentences'] = ' '.join(data[i]['masked_sentences'])
+    unmasked_sentences = [e['masked_sentences'].replace('[MASK]', e['obj_label'])
+            for e in data]
+
     # sort to group togheter sentences with similar length
     for sample in sorted(
         data, key=lambda k: len(" ".join(k["masked_sentences"]).split())
     ):
         masked_sentences = sample["masked_sentences"]
+        if num_examples > 0:
+            # Add examples to the context.
+            context_examples = list(np.random.choice(
+                    [s for s in unmasked_sentences if sample['sub_label'] not in s],
+                    num_examples, replace=False))
+            contextualized_masked_sentence = '\n'.join(context_examples + [sample['masked_sentences']])
+            masked_sentences = contextualized_masked_sentence
+
         current_samples_batch.append(sample)
-        current_sentences_batches.append(masked_sentences)
+        current_sentences_batches.append([masked_sentences])
         c += 1
         if c >= batch_size:
             list_samples_batches.append(current_samples_batch)
@@ -389,6 +404,7 @@ def main(args, shuffle_data=True, model=None):
     all_samples, ret_msg = filter_samples(
         model, data, vocab_subset, args.max_sentence_length, args.template
     )
+    assert len(data) == len(all_samples), 'They removed some data!!!!!!!'
 
     # OUT_FILENAME = "{}.jsonl".format(args.dataset_filename)
     # with open(OUT_FILENAME, 'w') as outfile:
@@ -441,7 +457,7 @@ def main(args, shuffle_data=True, model=None):
     if shuffle_data:
         shuffle(all_samples)
 
-    samples_batches, sentences_batches, ret_msg = batchify(all_samples, args.batch_size)
+    samples_batches, sentences_batches, ret_msg = batchify(all_samples, args.batch_size, num_examples=args.num_examples)
     logger.info("\n" + ret_msg + "\n")
     if args.use_negated_probes:
         sentences_batches_negated, ret_msg = batchify_negated(
@@ -456,6 +472,8 @@ def main(args, shuffle_data=True, model=None):
         num_threads = multiprocessing.cpu_count()
     pool = ThreadPool(num_threads)
     list_of_results = []
+
+    all_x = sorted([s[0] for i in range(len(samples_batches)) for s in sentences_batches[i]])
 
     for i in tqdm(range(len(samples_batches))):
 
